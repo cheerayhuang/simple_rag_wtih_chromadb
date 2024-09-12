@@ -1,17 +1,18 @@
 import logging
 
 from fastapi import FastAPI, File, Path, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Optional
 
-from db_mappber import db
+from db_mapper import db
 from rag import RagChain
 
 from settings import Settings
 
 app = FastAPI()
 
-_rag = RagChain()
+_rag = None
 
 logging.basicConfig(
     datefmt=Settings.LOG_DATE_FORMAT,
@@ -36,12 +37,15 @@ class QuestionParams(BaseModel):
 
 @app.post("/collections/langchain/documents")
 async def save_text(file: UploadFile = File(...)):
+    global _rag
 
     if not file.filename.endswith('.txt'):
         raise HTTPException(status_code=400, detail="Unspported file format.")
 
     content = await file.read()
     content = content.decode("utf-8")
+
+    _rag = RagChain(file.filename)
 
     db.save_doc(content, file.filename)
 
@@ -50,18 +54,25 @@ async def save_text(file: UploadFile = File(...)):
 
 @app.post("/llm")
 def ask_question(q: QuestionParams):
+    global _rag
+    if _rag is None:
+        return {
+            "message": "文件未上传或者没有关联",
+            "code": 500,
+        }
+
     ans_ret = _rag(q)
 
-    if ans_ret['answer'] != '':
+    if ans_ret != '':
         return {
             "message": "提问成功",
             "code": 200,
-            "data": ans_ret['answer'],
+            "data": ans_ret,
         }
 
     return {
         "message": "提问失败",
-        "code": 400,
+        "code": 500,
     }
 
 
