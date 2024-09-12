@@ -17,10 +17,15 @@ _llm = ChatOpenAI(
 class RagChain:
 
     def __init__(self, f_name, rag_db=db):
-        #self._qa_chain = create_stuff_documents_chain(_llm, prompt)
+        """
+        # use retrieval chain
+        self._qa_chain = create_stuff_documents_chain(_llm, prompt)
 
-        #self._rag_chain = create_retrieval_chain(
-        #    rag_db.as_retriever(), self._qa_chain)
+        self._rag_chain = create_retrieval_chain(
+            rag_db.as_retriever(), self._qa_chain)
+        """
+
+        # use RAW chain directly
         self._rag_chain = (
             {
                 'context': rag_db.as_filter_by_file_retriever(f_name) | format_docs,
@@ -38,9 +43,7 @@ class RagChain:
 
         if isinstance(q, object):
             if not hasattr(q, 'input'):
-                return {
-                    'answer': '',
-                }
+                return ''
 
             return self._rag_chain.invoke(q.input)
 
@@ -66,6 +69,8 @@ if __name__ == '__main__':
     #db.filter_by_file('a.txt')
 
     rag = RagChain('a.txt')
-    print(rag('这篇文章说了什么？'))
+    res = rag('这篇文章说了什么？')
+    print(res)
+    print(type(res))
     db.close('test-text')
 
