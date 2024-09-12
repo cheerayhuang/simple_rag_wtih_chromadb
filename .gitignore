@@ -1,0 +1,8 @@
+bin/
+include/
+lib64
+lib/
+share/
+chromadb/
+__pycache__/
+
